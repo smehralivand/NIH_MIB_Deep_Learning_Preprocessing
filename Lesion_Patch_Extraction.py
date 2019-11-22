@@ -137,8 +137,8 @@ def clip(Slice,WL,WW):
     :param WW: WW is half the length of the threshold interval
     :return: Input 2D array which values are clipped at [WL-WW, WL+WW]
     """
-    Slice[Slice < (WL - WW)] = np.floor(WL - WW)
-    Slice[Slice > (WL + WW)] = np.floor(WL + WW)
+    Slice[Slice < (WL - WW/2)] = np.floor(WL - WW/2)
+    Slice[Slice > (WL + WW/2)] = np.floor(WL + WW/2)
     return Slice
 
 
@@ -159,7 +159,7 @@ def dicom2patch():
         print('[i] Output directory:       ', args.target_folder)
         print('[i] Patch images are saved in forms of:        ', args.image_type)
         print('[i] Center of windowing threshold:             ', args.WL)
-        print('[i] Length of windowing interval:           ', 2*args.WW)
+        print('[i] Length of windowing interval:           ', args.WW)
 
         # Creating folders to save the results
         if 'png' in args.image_type:
