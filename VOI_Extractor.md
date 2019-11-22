@@ -19,6 +19,6 @@ Use the help function to get more information about arguments:
 
 Extracts patches from C:\Main and stores them in C:\Target in PNG format using (default) bone windowing with WL = 300 and WW = 1000
 
-*python Lesion_Patch_Extraction.py --dicom_folder=C:\\Main --target_folder=C:\\Target --image_type=npy --WL=600 WW=1500*
+*python Lesion_Patch_Extraction.py --dicom_folder=C:\\Main --target_folder=C:\\Target --image_type=npy --WL=600 --WW=1500*
 
 Extracts patches from C:\Main and stores them in C:\Target in NPY format using lung windowing with WL = 600 and WW = 1500
