@@ -4,7 +4,17 @@ Author: Sherif Mehralivand
 Email: sherif.mehralivand@mail.de
 Github: https://github.com/smehralivand/NIH_MIB_Deep_Learning_Preprocessing
 Twitter: @smehralivand
-Date: 6/9/2020
+Date: 7/2/2020
+
+Dependencies:
+Python 3.6
+Pathlib 1.0.1
+Numpy 1.18.5
+Scipy 1.5.0
+Pillow 6.2.1
+Scikit-Image 0.16.2
+Open-CV 3.4.2
+Pydicom 2.0.0
 ----------------------------------------------------------------------------------------------------------------------------------------
 '''
 
@@ -12,13 +22,15 @@ import os
 from pathlib import Path
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+import scipy.ndimage as ndimage
+from PIL import Image, ImageDraw
+from skimage import draw
 import cv2
 import pydicom
 
 class VoiPatient:
     '''
-    This class represents a patient scan and related voi files. Instances are initialez by the full path to the patient folder
+    This class represents a patient scan and related voi files. Instances are initialed by the full path to the patient folder
     containing the dicom and voi files passed as a string. All methods are performed on this folder. To process a folder containing
     several patients scans you can implement instances of this class in a for loop. Please check our Github page for code examples.
     '''
@@ -93,18 +105,31 @@ class VoiPatient:
         y_max = int(contour[:, 1].max())
         return image[y_min:y_max, x_min:x_max]
 
-    def create_cont_mask(image_size, contour, value = 255):
+    def create_cont_mask(img_size, contour, value = 1):
         '''
         This function inputs a numpy image array of shape (pixel width, pixel height) and a numpy VOI segmentation array
         of shape (number of segmentation points, 2) and outputs a binary (0, 1) numpy mask array of the segmentation
         based on the VOI contour.
-        Input - image_size: A tuple of the corresponding image's (width, height), contour: A numpy array of the
+        Input - img_size: A tuple of the corresponding image's (width, height), contour: A numpy array of the
         corresponding VOI contour, value: An integer representing the value (category) of the mask. 
         Output - A numpy array of the contour mask.
         '''
-        img_mask = np.zeros(image_size)
-        cv2.fillPoly(img_mask, [contour.astype(np.int32)], (value)) 
-        return img_mask
+        contour_list = []
+        for i in range(contour.shape[0]):
+            contour_list.append((contour[i, 0], contour[i, 1]))
+        contour = contour_list
+
+        img = Image.new('L', img_size, 0)
+        try:
+            ImageDraw.Draw(img).polygon(contour, outline=value, fill=value)
+        except:
+            print('Error: Mask could not be created.')
+        else:
+            img_mask = np.array(img)
+            img_mask = ndimage.binary_fill_holes(img_mask)
+            img_mask = img_mask.astype(np.uint8)
+            img_mask[img_mask==1] = value
+            return img_mask
 
     def save_bb_patch(dicom_folder, voi_path, target_folder):
         '''
@@ -122,6 +147,7 @@ class VoiPatient:
             file_name = ''.join((file_name, '.png'))
             file_path = Path(target_folder / file_name)
             patch = VoiPatient.extract_bb_patch(img[key], contour)
+            print(f'{file_name}')
             cv2.imwrite(file_path.as_posix(), patch)
 
     def save_mask(dicom_folder, voi_path, target_folder):
@@ -145,8 +171,10 @@ class VoiPatient:
             img_file_path = Path(target_folder / img_file_name)
             mask_file_path = Path(target_folder / mask_file_name)
             mask = VoiPatient.create_cont_mask(mask_dim, contour, 255)  
+            print(f'{mask_file_name}')
             cv2.imwrite(mask_file_path.as_posix(), mask) # save mask
-            cv2.imwrite(img_file_path.as_posix(), img[key]) # save corresponding image     
+            print(f'{img_file_name}')
+            cv2.imwrite(img_file_path.as_posix(), img[key]) # save corresponding image  
 
     def save_bb_patches(self, target_folder):
         '''
@@ -157,6 +185,7 @@ class VoiPatient:
         Output - None, saves patches in target folder.
         '''
         target_folder = Path(target_folder)
+        print(f'\nSaving patches in {target_folder.as_posix()}\n')
         for voi_file in self.patient_folder.rglob('*.voi'):
             VoiPatient.save_bb_patch(self.patient_folder, voi_file, target_folder)
 
@@ -169,5 +198,6 @@ class VoiPatient:
         Output - None, saves masks in target folder.
         '''
         target_folder = Path(target_folder)
+        print(f'\nSaving masks and corresponding image slices in {target_folder.as_posix()}\n')
         for voi_file in self.patient_folder.rglob('*.voi'):
             VoiPatient.save_mask(self.patient_folder, voi_file, target_folder)
